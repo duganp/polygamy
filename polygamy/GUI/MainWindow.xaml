@@ -1,0 +1,59 @@
+<Window x:Class="PolyGUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Polygamy" SizeToContent="WidthAndHeight" Icon="/PolyGUI;component/Polygamy.ico" UseLayoutRounding="True" Closed="MainWindowClosed" MinWidth="650" MinHeight="530" BorderThickness="2" ResizeMode="CanResizeWithGrip" MaxWidth="1000" MaxHeight="720">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="330*" />
+        </Grid.ColumnDefinitions>
+        <TextBox Name="OutputBox" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto" MaxLines="20000" Grid.Column="1" Grid.RowSpan="2" IsTabStop="False" FontFamily="Lucida Console" FontSize="9" Margin="0,10,9,9" HorizontalScrollBarVisibility="Auto" IsReadOnly="True" Padding="3">
+            <TextBox.ContextMenu>
+                <ContextMenu Name="OutputLogControl" Padding="3">
+                    <MenuItem Command="ApplicationCommands.Copy" Click="CopyLogWindow" Header="Copy" />
+                    <MenuItem Click="ClearLogWindow" Header="Clear" />
+                </ContextMenu>
+            </TextBox.ContextMenu>
+        </TextBox>
+        <Grid Name="GameBoardData" Margin="10" Width="350" Height="350" HorizontalAlignment="Center" VerticalAlignment="Center" ></Grid>
+        <Grid Height="108" Margin="5,0" Grid.Row="1" VerticalAlignment="Top">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Label Name="InputBoxLabel" Padding="0" Grid.Column="2" Margin="5,0" VerticalAlignment="Top" Height="15" />
+            <TextBox Name="InputBox" TextChanged="InputTextChanged" AcceptsReturn="True" VerticalContentAlignment="Center" FontFamily="Microsoft Sans Serif" Grid.Row="0" Grid.Column="2" Padding="0" Margin="5,0" Height="20" VerticalAlignment="Bottom" />
+            <ComboBox Name="GameSelection" IsReadOnly="True" Margin="4" Width="100" Height="20" SelectionChanged="GameSelectionChanged" />
+            <Slider Grid.Row="2" Name="SearchDepth" Interval="1" Value="5" Minimum="0" IsSnapToTickEnabled="True" TickPlacement="TopLeft" ToolTip="Search depth" IsMoveToPointEnabled="True" Maximum="16" Focusable="False" ValueChanged="SearchDepthChanged" Padding="0" Margin="5" />
+            <Button Content="Restart" Grid.Column="1" Name="RestartButton" Margin="5" Width="72" Height="24" Click="GameRestarted" />
+            <Button Content="Suggest" Height="24" Name="SuggestionButton" Width="72" Grid.Column="1" Grid.Row="1" Margin="5" Click="SuggestMove" />
+        </Grid>
+        <StatusBar Grid.Row="2" Name="StatusBar" Grid.ColumnSpan="2">
+            <StatusBarItem>
+                <TextBlock Name="Depth" Text="Depth" HorizontalAlignment="Right" />
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Name="DepthBox" Width="14" HorizontalAlignment="Left" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="Next status bar item" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="Next..." />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
