@@ -14,7 +14,7 @@ using namespace System::Security::Permissions;
 [assembly:AssemblyConfigurationAttribute("")];
 [assembly:AssemblyCompanyAttribute("")];
 [assembly:AssemblyProductAttribute("NetWrapper")];
-[assembly:AssemblyCopyrightAttribute("Copyright (c) Dugan Porter 2010")];
+[assembly:AssemblyCopyrightAttribute("Copyright (c) 2010")];
 [assembly:AssemblyTrademarkAttribute("")];
 [assembly:AssemblyCultureAttribute("")];
 

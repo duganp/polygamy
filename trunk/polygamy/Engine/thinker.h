@@ -1,7 +1,7 @@
 // thinker.h
 
 #pragma once
-#include "threading.h"
+#include "threader.h"
 
 
 class Thinker : private ThreadBase

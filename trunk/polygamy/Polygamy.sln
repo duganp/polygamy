@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Engine", "Engine\Engine.vcxproj", "{4B0AF40E-E2D7-404F-83D9-FB7321091FB9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PolyGUI", "GUI\PolyGUI.csproj", "{264E5ED9-D76A-43DB-910F-8DCAC4D337A7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{65BBC405-2DE3-49E9-A53A-B1A8E84C30D6} = {65BBC405-2DE3-49E9-A53A-B1A8E84C30D6}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PolyCUI", "CUI\PolyCUI.vcxproj", "{96A55E06-FBF6-4B68-A097-503C4AEF62BA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4B0AF40E-E2D7-404F-83D9-FB7321091FB9} = {4B0AF40E-E2D7-404F-83D9-FB7321091FB9}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetWrapper", "NetWrapper\NetWrapper.vcxproj", "{65BBC405-2DE3-49E9-A53A-B1A8E84C30D6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4B0AF40E-E2D7-404F-83D9-FB7321091FB9} = {4B0AF40E-E2D7-404F-83D9-FB7321091FB9}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SubversionScc) = preSolution
+		Svn-Managed = True
+		Manager = AnkhSVN - Subversion Support for Visual Studio
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|All = Debug|All
+		Release|All = Release|All
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4B0AF40E-E2D7-404F-83D9-FB7321091FB9}.Debug|All.ActiveCfg = Debug|Win32
+		{4B0AF40E-E2D7-404F-83D9-FB7321091FB9}.Debug|All.Build.0 = Debug|Win32
+		{4B0AF40E-E2D7-404F-83D9-FB7321091FB9}.Release|All.ActiveCfg = Release|Win32
+		{4B0AF40E-E2D7-404F-83D9-FB7321091FB9}.Release|All.Build.0 = Release|Win32
+		{264E5ED9-D76A-43DB-910F-8DCAC4D337A7}.Debug|All.ActiveCfg = Debug|x86
+		{264E5ED9-D76A-43DB-910F-8DCAC4D337A7}.Debug|All.Build.0 = Debug|x86
+		{264E5ED9-D76A-43DB-910F-8DCAC4D337A7}.Release|All.ActiveCfg = Release|x86
+		{264E5ED9-D76A-43DB-910F-8DCAC4D337A7}.Release|All.Build.0 = Release|x86
+		{96A55E06-FBF6-4B68-A097-503C4AEF62BA}.Debug|All.ActiveCfg = Debug|Win32
+		{96A55E06-FBF6-4B68-A097-503C4AEF62BA}.Debug|All.Build.0 = Debug|Win32
+		{96A55E06-FBF6-4B68-A097-503C4AEF62BA}.Release|All.ActiveCfg = Release|Win32
+		{96A55E06-FBF6-4B68-A097-503C4AEF62BA}.Release|All.Build.0 = Release|Win32
+		{65BBC405-2DE3-49E9-A53A-B1A8E84C30D6}.Debug|All.ActiveCfg = Debug|Win32
+		{65BBC405-2DE3-49E9-A53A-B1A8E84C30D6}.Debug|All.Build.0 = Debug|Win32
+		{65BBC405-2DE3-49E9-A53A-B1A8E84C30D6}.Release|All.ActiveCfg = Release|Win32
+		{65BBC405-2DE3-49E9-A53A-B1A8E84C30D6}.Release|All.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
