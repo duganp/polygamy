@@ -54,7 +54,7 @@ void OthelloGameState::reset()
     memset(m_player_cells_history, 0, sizeof m_player_cells_history);
 
     #if OTH_GAME_STATE_LIST
-        for (int n = 0; n < ARRAYSIZE(m_boards); ++n)
+        for (int n = 0; n < countof(m_boards); ++n)
         {
             m_boards[n].m_status = Board::eDirty;
             memset(m_boards[n].m_cells, eEmpty, sizeof m_boards[n].m_cells);
@@ -213,7 +213,7 @@ bool OthelloGameState::valid_move(GameMove move)
 
 RESULT OthelloGameState::apply_move(GameMove move)
 {
-    ASSERT(m_move_number < ARRAYSIZE(m_move_history));
+    ASSERT(m_move_number < countof(m_move_history));
 
     const short x = Cell(move).x;
     const short y = Cell(move).y;

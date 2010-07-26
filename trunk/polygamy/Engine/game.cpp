@@ -145,7 +145,7 @@ FORCEINLINE void GameState::generate_move_list(GameNode* node)
             undo_last_move();
             adjust_node_position(child_list, node->child_count);
             ++node->child_count;
-            ASSERT(node->child_count < ARRAYSIZE(child_list));
+            ASSERT(node->child_count < countof(child_list));
             #if MINIMAX_STATISTICS
                 ++g_moves_applied;
                 ++g_evaluated_nodes;

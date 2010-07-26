@@ -48,15 +48,15 @@ void AtaxxGameState::reset()
     memset(m_move_history, 0, sizeof m_move_history);
     memset(m_player_cells_history, 0, sizeof m_player_cells_history);
 
-    for (int n = 0; n < ARRAYSIZE(m_boards); ++n)  // FIXME: Probably don't need to set up EVERY board (same for Othello)
+    for (int n = 0; n < countof(m_boards); ++n)  // FIXME: Probably don't need to set up EVERY board (same for Othello)
     {
         Board& b = m_boards[n];  // Abbreviation
         b.m_status = Board::eDirty;
         memset(b.m_cells, eEmpty, sizeof b.m_cells);
 
         // Set up a double layer of sentinel cells around the board
-        for (int x = 0; x < ARRAYSIZE(b.m_cells); ++x)
-            for (int y = 0; y < ARRAYSIZE(b.m_cells[x]); ++y)
+        for (int x = 0; x < countof(b.m_cells); ++x)
+            for (int y = 0; y < countof(b.m_cells[x]); ++y)
                 b.m_cells[x][0] = b.m_cells[x][ATAXX_ROWS+2] =
                 b.m_cells[x][1] = b.m_cells[x][ATAXX_ROWS+3] =
                 b.m_cells[0][y] = b.m_cells[ATAXX_COLUMNS+2][y] =
