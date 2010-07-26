@@ -31,10 +31,10 @@
     #endif
 #endif
 
-// Default debug settings (can override in registry under HKCU\Software\Polygamy)
-#define DBG_COMPONENT           Polygamy
-#define DBG_DEFAULT_LEVEL       (TraceType_Error|TraceType_Warning)
-#define DBG_DEFAULT_BREAK_LEVEL (TraceType_Error)
+// Default trace settings (can override in registry under HKCU\Software\Polygamy)
+#define TRACE_COMPONENT           Polygamy
+#define TRACE_DEFAULT_LEVEL       (TraceType_Error|TraceType_Warning)
+#define TRACE_DEFAULT_BREAK_LEVEL (TraceType_Error)
 #include "tracer.h"
 
 // Global configuration (overrules per-module defaults)

@@ -3,4 +3,4 @@
 
 #include "shared.h"  // Global includes, settings
 
-#include "tracer.cpp"  // Debug trace support
+#include "tracer.cpp"  // For debug tracing and runtime error checking
