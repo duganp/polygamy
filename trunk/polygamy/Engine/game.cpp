@@ -42,12 +42,11 @@ int g_current_search_depth = 0;
 const GameDesc** g_game_list = NULL;
 int g_num_games = 0;
 
-int register_game(const char* name, GameCreator* game_creator, PlayerCreator* player_creator)
+int register_game(const char* name, GameCreator* game_creator)
 {
-    GameDesc* game_desc = new GameDesc;  // FIXME: Never freed, but don't care
+    GameDesc* game_desc = new GameDesc;  // Never freed, but don't care
     game_desc->m_name = name;
     game_desc->create_game = game_creator;
-    game_desc->create_player = player_creator;
 
     const GameDesc** new_game_list = new const GameDesc*[g_num_games + 1];
     memcpy(new_game_list, g_game_list, g_num_games * sizeof(GameDesc*));
@@ -60,16 +59,6 @@ int register_game(const char* name, GameCreator* game_creator, PlayerCreator* pl
 
 
 //
-// The base destructors are defined here because the C++ Standard states that
-// pure virtual methods cannot be defined inline.
-// FIXME: Remove after confirming this builds with GCC
-//
-
-//Player::~Player() {}
-//GameState::~GameState() {}
-
-
-//
 // Reset the base object's state.  Note that most derived game classes must
 // implement their own reset() method, and when they do, it must be sure to
 // call this one using GameState::reset().
@@ -79,7 +68,7 @@ void GameState::reset()
 {
     TRACE_VOID_METHOD();
 
-    m_move_number = 0;
+    m_move_counter = 0;
     m_player_up = 0;
 
     if (m_initial_node)
@@ -139,7 +128,7 @@ FORCEINLINE void GameState::generate_move_list(GameNode* node)
 
         for (GameMove* move = possible_moves; *move; ++move)
         {
-            if (FAILED(apply_move(*move))) continue;
+            if (apply_move(*move).failed()) continue;
             child_list[node->child_count].move = *move;
             child_list[node->child_count].resulting_node = new GameNode(position_val());
             undo_last_move();
@@ -152,7 +141,7 @@ FORCEINLINE void GameState::generate_move_list(GameNode* node)
             #endif
         }
 
-        if (node->child_count == 0 && SUCCEEDED(apply_passing_move()))
+        if (node->child_count == 0 && apply_passing_move().ok())
         {
             node->child_count = 1;
             child_list[0].move = PASSING_MOVE;
@@ -181,7 +170,7 @@ FORCEINLINE void GameState::generate_move_list(GameNode* node)
 }
 
 
-RESULT GameState::perform_move(GameMove move)
+Result GameState::perform_move(GameMove move)
 {
     TRACE_VOID_METHOD();
 
@@ -190,9 +179,9 @@ RESULT GameState::perform_move(GameMove move)
     generate_move_list(m_current_node);
     ASSERT(m_current_node->child_count > 0);
 
-    RESULT hr = (move == PASSING_MOVE) ? apply_passing_move() : apply_move(move);
+    Result hr = (move == PASSING_MOVE) ? apply_passing_move() : apply_move(move);
 
-    if (SUCCEEDED(hr))
+    if (hr.ok())
     {
         // In case this is a human move and doesn't match the computer's chosen
         // optimal move, we move it to the head of the current node's move list.
@@ -269,8 +258,8 @@ void GameState::revert_move()
 //  target_depth: target search depth
 //  maximum_analysis_time: ...
 //  ret_move: returns best move found, or NULL if none available
-//  lower_bound: FIXME
-//  upper_bound: FIXME
+//  lower_bound: ...
+//  upper_bound: ...
 //
 
 Value GameState::analyze(int target_depth, int maximum_analysis_time, __out GameMove* ret_move, Value lower_bound, Value upper_bound)
@@ -291,7 +280,7 @@ Value GameState::analyze(int target_depth, int maximum_analysis_time, __out Game
     //
     // 1. We've already explored the game tree to the requested depth.
     //    (The same result may be produced by the code below, but it
-    //    does no harm to skip it altogether for clarity - FIXME?)
+    //    does no harm to skip it altogether, for clarity.)
     //
     // 2. There is only one valid move.
     //
@@ -305,7 +294,7 @@ Value GameState::analyze(int target_depth, int maximum_analysis_time, __out Game
         return m_current_node->value;
     }
 
-    m_current_node->value = INVALID_VALUE;  // Make sure this is never used [FIXME: remove?]
+    m_current_node->value = INVALID_VALUE;  // This may be unnecessary
     bool already_bragged = false;
 
     DELAY_CHECKPOINT();
@@ -348,8 +337,7 @@ Value GameState::analyze(int target_depth, int maximum_analysis_time, __out Game
             Value new_value = minimax(current_depth, children[n].resulting_node, upper_bound, best_value_so_far);
 
             undo_last_move();
-            //MXTRACE(output(": value %d, %.3f ms                                                 \nMINIMAX: ", new_value, DELAY_MEASURED()));
-            MXTRACE(output(": value %d                                                          \nMINIMAX: ", new_value));  // FIXME - for AB comparisons (no ms)
+            MXTRACE(output(": value %d, %.3f ms                                                 \nMINIMAX: ", new_value, DELAY_MEASURED()));
 
             // Move this node to the appropriate position in the ordered child list,
             // and refresh the best value so far from the head of the list.
@@ -390,7 +378,7 @@ Value GameState::analyze(int target_depth, int maximum_analysis_time, __out Game
 
     #if MINIMAX_STATISTICS
         output("Move %d: %I64u nodes evaluated, %I64u moves applied, %I64u minimax calls, %I64u beta cutoffs\n",
-               m_move_number + 1, g_evaluated_nodes, g_moves_applied, g_minimax_calls, g_beta_cutoffs);
+               m_move_counter + 1, g_evaluated_nodes, g_moves_applied, g_minimax_calls, g_beta_cutoffs);
         g_total_evaluated_nodes += g_evaluated_nodes;
         g_total_beta_cutoffs += g_beta_cutoffs;
         g_evaluated_nodes = g_moves_applied = g_minimax_calls = g_beta_cutoffs = 0;
@@ -497,7 +485,7 @@ Value GameState::minimax(int depth, GameNode* node, Value floor, Value ceiling)
     }
 
     // If this position is a guaranteed win for either player, we consider it fully analyzed
-    // FIXME: I'm not sure this code is strictly needed
+    // FIXME: not sure this code is strictly needed
 //    if (is_victory(floor) || is_defeat(floor))
 //    {
 //        node->explored_depth = FULLY_ANALYZED;
@@ -575,7 +563,7 @@ Value GameState::minimax(int depth, GameNode* node, Value floor, Value ceiling)
 
         #if MINIMAX_STATISTICS
             output("Move %d: %I64u nodes evaluated, %I64u moves applied, %I64u minimax calls, %I64u beta cutoffs\n",
-                   m_move_number + 1, g_evaluated_nodes, g_moves_applied, g_minimax_calls, g_beta_cutoffs);
+                   m_move_counter + 1, g_evaluated_nodes, g_moves_applied, g_minimax_calls, g_beta_cutoffs);
             g_total_evaluated_nodes += g_evaluated_nodes;
             g_total_beta_cutoffs += g_beta_cutoffs;
             g_evaluated_nodes = g_moves_applied = g_minimax_calls = g_beta_cutoffs = 0;
@@ -605,11 +593,11 @@ void GameState::dump_tree(int depth, GameNode* node, int indentation) const
     char value_string[100];
     if (node->value >= VICTORY_VALUE)
     {
-        sprintf_s(value_string, "%s wins (value %d)", m_players[0]->get_side_name(), node->value);
+        sprintf_s(value_string, "%s wins (value %d)", get_player_name(0), node->value);
     }
     else if (node->value <= -VICTORY_VALUE)
     {
-        sprintf_s(value_string, "%s wins (value %d)", m_players[1]->get_side_name(), node->value);
+        sprintf_s(value_string, "%s wins (value %d)", get_player_name(1), node->value);
     }
     else
     {
@@ -644,7 +632,7 @@ void GameState::dump_tree(int depth, GameNode* node, int indentation) const
             output(". %d moves available:\n", node->child_count);
             for (int n = 0; n < node->child_count; ++n)
             {
-                for (int i = 0; i < indentation + 3; ++i) putchar(' ');
+                for (int i = 0; i < indentation + 3; ++i) output(" ");
                 char move_string[MAX_MOVE_STRING_SIZE];
                 write_move(node->continuations[n].move, sizeof move_string, move_string);
                 output("%s: ", move_string);

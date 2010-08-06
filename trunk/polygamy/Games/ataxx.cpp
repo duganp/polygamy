@@ -10,24 +10,22 @@
 // Game registration stuff
 
 GameState* AtaxxGameState::creator() {return new AtaxxGameState;}
-Player* AtaxxPlayer::creator(bool human, int player_num) {return new AtaxxPlayer(human, player_num);}
 
 static int ataxx_registered =
     register_game
     (
         "Ataxx",
-        AtaxxGameState::creator,
-        AtaxxPlayer::creator
+        AtaxxGameState::creator
     );
 
 
-RESULT AtaxxGameState::set_initial_position(size_t position_size, __in_bcount(position_size) const char* position)
+Result AtaxxGameState::set_initial_position(size_t position_size, __in_bcount(position_size) const char* position)
 {
     static const size_t expected_size = (ATAXX_COLUMNS + 1) * ATAXX_ROWS;  // The +1 allows for newline characters
 
     if (position == NULL || position_size < expected_size)
     {
-        return FAIL;  // FIXME: printf/spew something
+        return Result::Fail;
     }
 
     m_initial_position = new char[expected_size];
@@ -35,9 +33,9 @@ RESULT AtaxxGameState::set_initial_position(size_t position_size, __in_bcount(po
 
     memcpy(m_initial_position, position, expected_size);
 
-    reset();  // FIXME: hack - figure out this reset() crap, object lifetime stages etc
+    reset();
 
-    return OK;  // FIXME: Could validate position data and convert it to a clearer internal form
+    return Result::OK;  // FIXME: Could validate position data and convert it to a clearer internal form
 }
 
 
@@ -50,18 +48,22 @@ void AtaxxGameState::reset()
 
     for (int n = 0; n < countof(m_boards); ++n)  // FIXME: Probably don't need to set up EVERY board (same for Othello)
     {
-        Board& b = m_boards[n];  // Abbreviation
-        b.m_status = Board::eDirty;
-        memset(b.m_cells, eEmpty, sizeof b.m_cells);
+        Board& brd = m_boards[n];  // Abbreviation
+        brd.m_status = Board::eDirty;
+        memset(brd.m_cells, eEmpty, sizeof brd.m_cells);
 
         // Set up a double layer of sentinel cells around the board
-        for (int x = 0; x < countof(b.m_cells); ++x)
-            for (int y = 0; y < countof(b.m_cells[x]); ++y)
-                b.m_cells[x][0] = b.m_cells[x][ATAXX_ROWS+2] =
-                b.m_cells[x][1] = b.m_cells[x][ATAXX_ROWS+3] =
-                b.m_cells[0][y] = b.m_cells[ATAXX_COLUMNS+2][y] =
-                b.m_cells[1][y] = b.m_cells[ATAXX_COLUMNS+3][y] =
+        for (int x = 0; x < countof(brd.m_cells); ++x)
+        {
+            for (int y = 0; y < countof(brd.m_cells[x]); ++y)
+            {
+                brd.m_cells[x][0] = brd.m_cells[x][ATAXX_ROWS+2] =
+                brd.m_cells[x][1] = brd.m_cells[x][ATAXX_ROWS+3] =
+                brd.m_cells[0][y] = brd.m_cells[ATAXX_COLUMNS+2][y] =
+                brd.m_cells[1][y] = brd.m_cells[ATAXX_COLUMNS+3][y] =
                 eBlocked;
+            }
+        }
     }
 
     if (m_initial_position)
@@ -117,8 +119,8 @@ GameMove* AtaxxGameState::get_possible_moves() const
     static GameMove move_array[ATAXX_COLUMNS * ATAXX_ROWS * 24];
     int moves_found = 0;
 
-    if (m_player_cells_history[m_move_number][eBlue] != 0 &&
-        m_player_cells_history[m_move_number][eRed] != 0 &&
+    if (m_player_cells_history[move_counter()][eBlue] != 0 &&
+        m_player_cells_history[move_counter()][eRed] != 0 &&
         m_cells_available != 0)
     {
         #if RANDOMIZE
@@ -142,7 +144,7 @@ GameMove* AtaxxGameState::get_possible_moves() const
             {
                 // First look for jump moves from any cell two steps away
                 #define CHECK_JUMP_MOVE(i, j) \
-                    if (cell(i, j) == m_player_up) \
+                    if (cell(i, j) == player_up()) \
                         {++moves_found; *current_move++ = encode_move(i, j, x, y);}
 
                 CHECK_JUMP_MOVE(x-2, y-2);
@@ -165,11 +167,11 @@ GameMove* AtaxxGameState::get_possible_moves() const
                 CHECK_JUMP_MOVE(x+0, y+2);
                 CHECK_JUMP_MOVE(x+1, y+2);
 
-                // Now see if m_player_up is on any neighboring cell.  If so, there's
+                // Now see if player_up() is on any neighboring cell.  If so, there's
                 // a clone move to this cell, and we can just pick the first one found,
                 // since all 8 possibilities are equivalent.
                 #define CHECK_CLONE_MOVE(i, j) \
-                    if (cell(i, j) == m_player_up) \
+                    if (cell(i, j) == player_up()) \
                         {++moves_found; *current_move++ = encode_move(i, j, x, y); continue;}
 
                 CHECK_CLONE_MOVE(x-1, y-1);
@@ -235,7 +237,7 @@ bool AtaxxGameState::valid_move(GameMove move)
         GameMove* possible_moves = get_possible_moves();
         for (GameMove* m = possible_moves; *m; ++m)
         {
-            if (SUCCEEDED(apply_move(*m)))
+            if (apply_move(*m).ok())
             {
                 undo_last_move();
                 char move_string[MAX_MOVE_STRING_SIZE];
@@ -250,7 +252,7 @@ bool AtaxxGameState::valid_move(GameMove move)
     int source_x, source_y, target_x, target_y;
     decode_move(move, &source_x, &source_y, &target_x, &target_y);
 
-    if (cell(source_x, source_y) != m_player_up)
+    if (cell(source_x, source_y) != player_up())
     {
         TRACE(INFO, "Invalid move; source cell is not occupied by current player");
         return false;
@@ -271,28 +273,28 @@ bool AtaxxGameState::valid_move(GameMove move)
 }
 
 
-RESULT AtaxxGameState::apply_move(GameMove move)
+Result AtaxxGameState::apply_move(GameMove move)
 {
     ASSERT(valid_move(move));
 
     int source_x, source_y, target_x, target_y;
     decode_move(move, &source_x, &source_y, &target_x, &target_y);
 
-    if (m_boards[m_move_number+1].m_status == Board::eDirty)
+    if (m_boards[move_counter()+1].m_status == Board::eDirty)
     {
-        memcpy(m_boards[m_move_number+1].m_cells,
-               m_boards[m_move_number].m_cells,
-               sizeof m_boards[m_move_number].m_cells);
-        m_boards[m_move_number+1].m_status = Board::eClean;
+        memcpy(m_boards[move_counter()+1].m_cells,
+               m_boards[move_counter()].m_cells,
+               sizeof m_boards[move_counter()].m_cells);
+        m_boards[move_counter()+1].m_status = Board::eClean;
     }
 
-    m_move_history[m_move_number] = move;
-    ++m_move_number;
+    m_move_history[move_counter()] = move;
+    advance_move_counter();
 
     int player_up_gain = 0;
     int opponent_loss = 0;
 
-    cell(target_x, target_y) = m_player_up;
+    cell(target_x, target_y) = player_up();
     if (source_x == target_x-2 || source_x == target_x+2 ||
         source_y == target_y-2 || source_y == target_y+2)
     {
@@ -304,64 +306,68 @@ RESULT AtaxxGameState::apply_move(GameMove move)
         --m_cells_available;
     }
 
-    // FIXME: Could unroll this too
-    const PlayerCode opponent = (m_player_up == eRed) ? eBlue : eRed;
+    // FUTURE: Could unroll this too
+    const PlayerCode opponent = (player_up() == eRed) ? eBlue : eRed;
     for (int x = target_x-1; x <= target_x+1; ++x)
+    {
         for (int y = target_y-1; y <= target_y+1; ++y)
+        {
             if (cell(x, y) == opponent)
             {
-                cell(x, y) = m_player_up;
+                cell(x, y) = player_up();
                 ++player_up_gain;
                 ++opponent_loss;
             }
+        }
+    }
 
-    m_boards[m_move_number].m_status = Board::eDirty;
-    m_boards[m_move_number+1].m_status = Board::eDirty;
+    m_boards[move_counter()].m_status = Board::eDirty;
+    m_boards[move_counter()+1].m_status = Board::eDirty;
 
-    m_player_cells_history[m_move_number][m_player_up] = m_player_cells_history[m_move_number-1][m_player_up] + player_up_gain;
-    m_player_cells_history[m_move_number][opponent] = m_player_cells_history[m_move_number-1][opponent] - opponent_loss;
+    m_player_cells_history[move_counter()][player_up()] = m_player_cells_history[move_counter()-1][player_up()] + player_up_gain;
+    m_player_cells_history[move_counter()][opponent] = m_player_cells_history[move_counter()-1][opponent] - opponent_loss;
 
-    m_player_up = opponent;
+    switch_player_up();
 
-    return OK;
+    return Result::OK;
 }
 
 
-RESULT AtaxxGameState::apply_passing_move()
+Result AtaxxGameState::apply_passing_move()
 {
     if (m_cells_available == 0)
     {
-        return FAIL;
+        return Result::Fail;
     }
 
-    if (m_boards[m_move_number+1].m_status == Board::eDirty)
+    if (m_boards[move_counter()+1].m_status == Board::eDirty)
     {
-        memcpy(m_boards[m_move_number+1].m_cells,
-               m_boards[m_move_number].m_cells,
-               sizeof m_boards[m_move_number].m_cells);
-        m_boards[m_move_number+1].m_status = Board::eClean;
+        memcpy(m_boards[move_counter()+1].m_cells,
+               m_boards[move_counter()].m_cells,
+               sizeof m_boards[0].m_cells);
+        m_boards[move_counter()+1].m_status = Board::eClean;
     }
-    m_boards[m_move_number+2].m_status = Board::eDirty;
+    m_boards[move_counter()+2].m_status = Board::eDirty;
 
-    m_move_history[m_move_number] = PASSING_MOVE;
-    m_player_cells_history[m_move_number+1][eBlue] = m_player_cells_history[m_move_number][eBlue];
-    m_player_cells_history[m_move_number+1][eRed] = m_player_cells_history[m_move_number][eRed];
-    m_player_up = (m_player_up == eRed) ? eBlue : eRed;
-    ++m_move_number;
+    m_move_history[move_counter()] = PASSING_MOVE;
+    m_player_cells_history[move_counter()+1][eBlue] = m_player_cells_history[move_counter()][eBlue];
+    m_player_cells_history[move_counter()+1][eRed] = m_player_cells_history[move_counter()][eRed];
+    switch_player_up();
+    advance_move_counter();
 
-    return OK;
+    return Result::OK;
 }
 
 
 void AtaxxGameState::undo_last_move()
 {
-    ASSERT(m_move_number > 0);
-    --m_move_number;
+    ASSERT(move_counter() > 0);
+    retreat_move_counter();
 
-    if (m_move_history[m_move_number] != PASSING_MOVE)
+    if (m_move_history[move_counter()] != PASSING_MOVE)
     {
         int source_x, source_y, target_x, target_y;
-        decode_move(m_move_history[m_move_number], &source_x, &source_y, &target_x, &target_y);
+        decode_move(m_move_history[move_counter()], &source_x, &source_y, &target_x, &target_y);
         if (source_x >= target_x-1 && source_x <= target_x+1 &&
             source_y >= target_y-1 && source_y <= target_y+1)
         {
@@ -369,34 +375,22 @@ void AtaxxGameState::undo_last_move()
         }
     }
 
-    m_player_up = (m_player_up == eRed) ? eBlue : eRed;
+    switch_player_up();
 }
 
 
+// Simplistic position evaluation, but good enough to trounce most humans
 Value AtaxxGameState::position_val() const
 {
-    return m_player_cells_history[m_move_number][eBlue] - m_player_cells_history[m_move_number][eRed];
-}
-
-
-const Player* AtaxxGameState::player_ahead() const
-{
-    // Could just use position_val() right now, but possibly not later
-    // if it becomes more sophisticated than just the cell count
-
-    int blue = m_player_cells_history[m_move_number][eBlue];
-    int red = m_player_cells_history[m_move_number][eRed];
-
-    return blue > red ? m_players[eBlue] :
-           blue < red ? m_players[eRed] : NULL;
+    return m_player_cells_history[move_counter()][eBlue] - m_player_cells_history[move_counter()][eRed];
 }
 
 
 bool AtaxxGameState::game_over()
 {
     // Game is over when someone has been wiped out or the board is full
-    return m_player_cells_history[m_move_number][eBlue] == 0 ||
-           m_player_cells_history[m_move_number][eRed] == 0 ||
+    return m_player_cells_history[move_counter()][eBlue] == 0 ||
+           m_player_cells_history[move_counter()][eRed] == 0 ||
            m_cells_available == 0;
 }
 
@@ -429,11 +423,11 @@ void AtaxxGameState::display(size_t output_size, __out_ecount(output_size) char*
         StringCchPrintfExA(output, output_size, &output, &output_size, 0, "อออ%c", col == ATAXX_COLUMNS-1 ? 'ผ' : 'ฯ');
     }
 
-    if (m_move_number)
+    if (move_counter() != 0)
     {
-        StringCchPrintfExA(output, output_size, &output, &output_size, 0, " (move %d; ", m_move_number);
-        int red = m_player_cells_history[m_move_number][eRed];
-        int blue = m_player_cells_history[m_move_number][eBlue];
+        StringCchPrintfExA(output, output_size, &output, &output_size, 0, " (move %d; ", move_counter());
+        int red = m_player_cells_history[move_counter()][eRed];
+        int blue = m_player_cells_history[move_counter()][eBlue];
         if (red == blue)
         {
             StringCchPrintfExA(output, output_size, &output, &output_size, 0, "tied at %d cells each)\n ", red);
@@ -458,8 +452,8 @@ void AtaxxGameState::display(size_t output_size, __out_ecount(output_size) char*
 
 void AtaxxGameState::display_score_sheet(bool include_moves, size_t output_size, __out_ecount(output_size) char* output) const
 {
-    int red = m_player_cells_history[m_move_number][eRed];
-    int blue = m_player_cells_history[m_move_number][eBlue];
+    int red = m_player_cells_history[move_counter()][eRed];
+    int blue = m_player_cells_history[move_counter()][eBlue];
 
     if (red == blue)
     {
@@ -474,8 +468,8 @@ void AtaxxGameState::display_score_sheet(bool include_moves, size_t output_size,
 
     if (include_moves)
     {
-        StringCchPrintfExA(output, output_size, &output, &output_size, 0, "In %d moves:\n", m_move_number);
-        for (int n = 0; n < m_move_number; ++n)
+        StringCchPrintfExA(output, output_size, &output, &output_size, 0, "In %d moves:\n", move_counter());
+        for (int n = 0; n < move_counter(); ++n)
         {
             char move_string[MAX_MOVE_STRING_SIZE];
             write_move(m_move_history[n], sizeof move_string, move_string);
