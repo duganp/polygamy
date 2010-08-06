@@ -26,8 +26,45 @@
 
 // Define countof() if necessary (better version at http://blogs.msdn.com/b/the1/archive/2004/05/07/128242.aspx)
 #ifndef countof
-    #define countof(a) (sizeof(a) / sizeof *(a))
-#endif
+    #ifdef _countof
+        #define countof _countof
+    #else
+        #define countof(a) (sizeof(a) / sizeof *(a))
+        template <typename T, size_t N> char (&_countof_helper(T (&array)[N]))[N];
+        #define countof(array) (sizeof(_countof_helper(array)))
+    #endif
+#endif // #ifndef countof
+
+// Define typeof() for some basic types
+#ifndef typeof
+    #define typeof(x) typeof_c<sizeof(*typeof_f(x))>::V
+    #define REGISTER_TYPEOF(N,T) template<> struct typeof_c<N> {typedef wrap<T>::U V;}; char (*typeof_f(const wrap<T>::U &))[N]
+    template<typename T> struct wrap {typedef T U;};
+    template<int N> struct typeof_c;
+    REGISTER_TYPEOF(1, char);
+    REGISTER_TYPEOF(2, unsigned char);
+    REGISTER_TYPEOF(3, short);
+    REGISTER_TYPEOF(4, unsigned short);
+    REGISTER_TYPEOF(5, int);
+    REGISTER_TYPEOF(6, unsigned int);
+    REGISTER_TYPEOF(7, long);
+    REGISTER_TYPEOF(8, unsigned long);
+    REGISTER_TYPEOF(9, float);
+    REGISTER_TYPEOF(10, double);
+    REGISTER_TYPEOF(11, long double);
+    REGISTER_TYPEOF(12, char*);
+    REGISTER_TYPEOF(13, unsigned char*);
+    REGISTER_TYPEOF(14, short*);
+    REGISTER_TYPEOF(15, unsigned short*);
+    REGISTER_TYPEOF(16, int*);
+    REGISTER_TYPEOF(17, unsigned int*);
+    REGISTER_TYPEOF(18, long*);
+    REGISTER_TYPEOF(19, unsigned long*);
+    REGISTER_TYPEOF(20, float*);
+    REGISTER_TYPEOF(21, double*);
+    REGISTER_TYPEOF(22, long double*);
+    REGISTER_TYPEOF(23, void*);
+#endif // #ifndef typeof
 
 // Local version of C_ASSERT (avoids definition clashes with the standard one)
 #define GRAB_BAG_C_ASSERT(x) typedef char __compile_time_check__[(x) ? 1 : -1]
@@ -47,7 +84,7 @@ template<typename T> inline T Max(const T a, const T b) {return a > b ? a : b;}
 // Returns the lower of two numerical expressions without evaluating them twice
 template<typename T> inline T Min(const T a, const T b) {return a < b ? a : b;}
 
-// Returns the number of set bits in the given unsigned number
+// Returns the number of bits set in the given unsigned number
 template <typename T> UINT32 CountBits(T x)
 {
     UINT32 bitCount = 0;
@@ -55,7 +92,7 @@ template <typename T> UINT32 CountBits(T x)
     return bitCount;
 }
 
-// Define 64-bit Interlocked functions as they are not available on XP
+// Define 64-bit Interlocked* functions as they are not available on XP
 #if defined(_X86_) && _WIN32_WINNT < 0x0502
     inline LONGLONG InterlockedCompareExchange64(LONGLONG volatile* Destination, LONGLONG Exchange, LONGLONG Comperand)
     {
