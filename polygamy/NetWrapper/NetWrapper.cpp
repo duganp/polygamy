@@ -1,17 +1,19 @@
 // NetWrapper.cpp
+//
+// REFERENCES ON MANAGED C++ WRAPPERS:
+//
+// http://stackoverflow.com/questions/425752/managed-c-wrappers-for-legacy-c-libraries
+//
 
 #include "NetWrapper.h"
 
 using namespace System::Runtime::InteropServices;
-
 using namespace NetWrapper;
 
 
-ManagedGameState::ManagedGameState(GameState* pGameState, Player* player0, Player* player1)
+ManagedGameState::ManagedGameState(GameState* pGameState)
 {
     m_pGameState = pGameState;
-    m_player0 = player0;
-    m_player1 = player1;
 
     m_unmanaged_output_buffer = new char[1024];
     m_unmanaged_output_buffer[0] = '\0';
@@ -23,14 +25,6 @@ ManagedGameState::ManagedGameState(GameState* pGameState, Player* player0, Playe
 ManagedGameState::~ManagedGameState()
 {
     delete m_pGameState;
-    delete m_player0;
-    delete m_player1;
-}
-
-String^ ManagedGameState::GetPlayerAhead()
-{
-    const Player* winner = m_pGameState->player_ahead();
-    return gcnew String(winner ? winner->get_side_name() : "Neither player");
 }
 
 GameMove ManagedGameState::MoveFromString(String^ move_string)
@@ -75,10 +69,5 @@ String^ ManagedGameState::GetScoreSheet(bool include_moves)
 
 ManagedGameState^ ManagedGameList::CreateGame(int index)
 {
-    GameState* pGameState = g_game_list[index]->create_game();
-    Player* player0 = g_game_list[index]->create_player(false, 0);
-    Player* player1 = g_game_list[index]->create_player(false, 1);
-    pGameState->set_player(0, player0);
-    pGameState->set_player(1, player1);
-    return gcnew ManagedGameState(pGameState, player0, player1);
+    return gcnew ManagedGameState(g_game_list[index]->create_game());
 }

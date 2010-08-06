@@ -10,14 +10,12 @@
 // Game registration stuff
 
 GameState* Connect4GameState::creator() {return new Connect4GameState;}
-Player* Connect4Player::creator(bool human, int player_num) {return new Connect4Player(human, player_num);}
 
 static int connect4_registered =
     register_game
     (
         "Connect 4",
-        Connect4GameState::creator,
-        Connect4Player::creator
+        Connect4GameState::creator
     );
 
 
@@ -25,7 +23,7 @@ void Connect4GameState::reset()
 {
     GameState::reset();
 
-    m_winner = NULL;
+    m_winner = -1;
     memset(m_move_history, 0, sizeof m_move_history);
     memset(m_board, eEmpty, sizeof m_board);
 }
@@ -37,7 +35,7 @@ GameMove* Connect4GameState::get_possible_moves() const
     GameMove* current_move = possible_moves;
 
     // There are no legal moves if someone has already won
-    if (m_winner == NULL)
+    if (m_winner == -1)
     {
         #if RANDOMIZE
             int start_col = rand() % CONNECT4_COLUMNS;
@@ -84,11 +82,11 @@ bool Connect4GameState::valid_move(GameMove move)
 }
 
 
-RESULT Connect4GameState::apply_move(GameMove move)
+Result Connect4GameState::apply_move(GameMove move)
 {
     ASSERT(valid_move(move));
-    ASSERT(m_winner == NULL);
-    ASSERT(m_move_number < CONNECT4_COLUMNS * CONNECT4_ROWS);
+    ASSERT(m_winner == -1);
+    ASSERT(move_counter() < CONNECT4_COLUMNS * CONNECT4_ROWS);
 
     // Locate the first free cell in the requested move column
     const int x = move - 1;
@@ -96,13 +94,13 @@ RESULT Connect4GameState::apply_move(GameMove move)
     while (m_board[x][y] != eEmpty) ++y;
     ASSERT(y < CONNECT4_ROWS);
 
-    m_board[x][y] = m_player_up;
+    m_board[x][y] = player_up();
 
     // Check for victory condition (4 in a row vertically, horizontally or diagonally)
     bool victorious = false;
 
     // Vertical test
-    if (y >= 3 && m_board[x][y-1] == m_player_up && m_board[x][y-2] == m_player_up && m_board[x][y-3] == m_player_up)
+    if (y >= 3 && m_board[x][y-1] == player_up() && m_board[x][y-2] == player_up() && m_board[x][y-3] == player_up())
     {
         victorious = true;
     }
@@ -115,7 +113,7 @@ RESULT Connect4GameState::apply_move(GameMove move)
 
         for (int horiz_count = 0, n = left_bound; n <= right_bound; ++n)
         {
-            if (m_board[n][y] == m_player_up)
+            if (m_board[n][y] == player_up())
             {
                 if (++horiz_count == 4) {victorious = true; break;}
             }
@@ -137,7 +135,7 @@ RESULT Connect4GameState::apply_move(GameMove move)
 
         for (int diag1_count = 0, n = -room_on_left; n <= room_on_right; ++n)
         {
-            if (m_board[x+n][y+n] == m_player_up)
+            if (m_board[x+n][y+n] == player_up())
             {
                 if (++diag1_count == 4) {victorious = true; break;}
             }
@@ -159,7 +157,7 @@ RESULT Connect4GameState::apply_move(GameMove move)
 
         for (int diag2_count = 0, n = -room_on_left; n <= room_on_right; ++n)
         {
-            if (m_board[x+n][y-n] == m_player_up)
+            if (m_board[x+n][y-n] == player_up())
             {
                 if (++diag2_count == 4) {victorious = true; break;}
             }
@@ -172,33 +170,33 @@ RESULT Connect4GameState::apply_move(GameMove move)
 
     if (victorious)
     {
-        m_winner = player_to_move();
+        m_winner = player_up();
     }
 
-    m_move_history[m_move_number].x = short(x);
-    m_move_history[m_move_number].y = short(y);
-    ++m_move_number;
-    m_player_up = (m_player_up == eRed) ? eBlue : eRed;
+    m_move_history[move_counter()].x = short(x);
+    m_move_history[move_counter()].y = short(y);
+    advance_move_counter();
+    switch_player_up();
 
-    return OK;
+    return Result::OK;
 }
 
 
 void Connect4GameState::undo_last_move()
 {
-    ASSERT(m_move_number > 0);
-    --m_move_number;
+    ASSERT(move_counter() > 0);
+    retreat_move_counter();
 
-    m_board[m_move_history[m_move_number].x][m_move_history[m_move_number].y] = eEmpty;
-    m_winner = NULL;
-    m_player_up = (m_player_up == eRed) ? eBlue : eRed;
+    m_board[m_move_history[move_counter()].x][m_move_history[move_counter()].y] = eEmpty;
+    m_winner = -1;
+    switch_player_up();
 }
 
 
 Value Connect4GameState::position_val() const
 {
-    return m_winner == NULL ? 0 :
-           m_winner == player_to_move() ? victory_val() :
+    return m_winner == -1 ? 0 :
+           m_winner == player_up() ? victory_val() :
            defeat_val();
 }
 
@@ -206,7 +204,7 @@ Value Connect4GameState::position_val() const
 bool Connect4GameState::game_over()
 {
     // Game is over if we have a winner or the board is full
-    return m_winner || m_move_number == CONNECT4_COLUMNS * CONNECT4_ROWS;
+    return (m_winner != -1) || (move_counter() == CONNECT4_COLUMNS * CONNECT4_ROWS);
 }
 
 
@@ -237,7 +235,7 @@ void Connect4GameState::display(size_t output_size, __out_ecount(output_size) ch
         StringCchPrintfExA(output, output_size, &output, &output_size, 0,
                            "อออ%c", i == CONNECT4_COLUMNS-1 ? 'ผ' : 'ฯ');
     }
-    StringCchPrintfExA(output, output_size, &output, &output_size, 0, " (move %u)\n", m_move_number);
+    StringCchPrintfExA(output, output_size, &output, &output_size, 0, " (move %u)\n", move_counter());
     for (int i = 0; i < CONNECT4_COLUMNS; ++i)
     {
         StringCchPrintfExA(output, output_size, &output, &output_size, 0, "   %c", '1' + i);
@@ -248,14 +246,12 @@ void Connect4GameState::display(size_t output_size, __out_ecount(output_size) ch
 
 void Connect4GameState::display_score_sheet(bool include_moves, size_t output_size, __out_ecount(output_size) char* output) const
 {
-    StringCchPrintfExA(output, output_size, &output, &output_size, 0,
-                       "%s won", m_winner == m_players[eBlue] ? "Blue" :
-                     m_winner == m_players[eRed] ? "Red" : "Nobody");
+    StringCchPrintfExA(output, output_size, &output, &output_size, 0, "%s won", get_player_name(m_winner));
 
     if (include_moves)
     {
-        StringCchPrintfExA(output, output_size, &output, &output_size, 0, " in %d moves:\n", m_move_number);
-        for (int n = 0; n < m_move_number; ++n)
+        StringCchPrintfExA(output, output_size, &output, &output_size, 0, " in %d moves:\n", move_counter());
+        for (int n = 0; n < move_counter(); ++n)
         {
             StringCchPrintfExA(output, output_size, &output, &output_size, 0, "\t%d. %s #%d\n", n + 1, (n % 2) ? "Red" : "Blue", m_move_history[n].x + 1);
         }

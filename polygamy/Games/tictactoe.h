@@ -1,6 +1,8 @@
 // tictactoe.h
 
-#pragma once
+#ifndef GAMES_TICTACTOE_H
+#define GAMES_TICTACTOE_H
+
 #include "game.h"  // Base class
 
 // Game configuration
@@ -14,23 +16,6 @@
 #define eEmpty  CellState(2)
 
 
-class TicTacToePlayer : public Player
-{
-public:
-
-    // Factory function
-    static Player* creator(bool, int);
-
-    // Player method overrides
-    const char* get_side_name() const {return m_id == eCross ? "Crosses" : "Noughts";}
-
-private:
-
-    TicTacToePlayer(bool human, int id =0, const char* name =0, bool attributes =0)
-      : Player(human, id, name, attributes) {}
-};
-
-
 class TicTacToeGameState : public GameState
 {
 public:
@@ -39,29 +24,29 @@ public:
     static GameState* creator();
 
     // GameState method overrides
-    void reset();
-    GameMove* get_possible_moves() const;
-    RESULT apply_move(GameMove);
-    void undo_last_move();
-    bool game_over() {return position_val() != 0 || m_move_number >= TTT_DIMENSION*TTT_DIMENSION;}
-    void display(size_t size, __out_ecount(size) char*) const;
-    void display_score_sheet(bool, size_t size, __out_ecount(size) char*) const;
+    virtual const char* get_player_name(PlayerCode p) const {return p == eCross ? "Crosses" : "Noughts";}
+    virtual void reset();
+    virtual GameMove* get_possible_moves() const;
+    virtual Result apply_move(GameMove);
+    virtual void undo_last_move();
+    virtual bool game_over() {return position_val() != 0 || move_counter() >= TTT_DIMENSION*TTT_DIMENSION;}
+    virtual void display(size_t size, __out_ecount(size) char*) const;
+    virtual void display_score_sheet(bool, size_t size, __out_ecount(size) char*) const;
 
     // For use by the GUI frontend only
-    int get_rows() const {return TTT_DIMENSION;}
-    int get_columns() const {return TTT_DIMENSION;}
-    int get_cell_states_count() const {return 3;}  // Nought, cross and empty
-    const char* get_cell_state_image_name(int state) const;
-    int get_cell_state(int row, int column) const {return m_cells[m_move_number][row][column];}
+    virtual int get_rows() const {return TTT_DIMENSION;}
+    virtual int get_columns() const {return TTT_DIMENSION;}
+    virtual int get_cell_states_count() const {return 3;}  // Nought, cross and empty
+    virtual const char* get_cell_state_image_name(int state) const;
+    virtual int get_cell_state(int row, int column) const {return m_cells[move_counter()][row][column];}
 
     // Move management
-    GameMove read_move(const char*) const;
-    void write_move(GameMove, int size, __in_ecount(size) char*) const;
-    bool valid_move(GameMove);
+    virtual GameMove read_move(const char*) const;
+    virtual void write_move(GameMove, int size, __in_ecount(size) char*) const;
+    virtual bool valid_move(GameMove);
 
     // Position value management
-    Value position_val() const {return m_value_history[m_move_number];}
-    const Player* player_ahead() const {return position_val() > 0 ? m_players[eCross] : position_val() < 0 ? m_players[eNought] : NULL;}
+    virtual Value position_val() const {return m_value_history[move_counter()];}
 
 private:
 
@@ -73,3 +58,5 @@ private:
     // Internal methods
     TicTacToeGameState() {reset();}
 };
+
+#endif // GAMES_TICTACTOE_H

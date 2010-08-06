@@ -1,6 +1,8 @@
 // connect4.h
 
-#pragma once
+#ifndef GAMES_CONNECT4_H
+#define GAMES_CONNECT4_H
+
 #include "game.h"  // Base class
 
 // Game configuration
@@ -17,23 +19,6 @@
 #define eEmpty CellState(2)
 
 
-class Connect4Player : public Player
-{
-public:
-
-    // Factory function
-    static Player* creator(bool, int);
-
-    // Player method overrides
-    const char* get_side_name() const {return m_id == eBlue ? "Blue" : "Red";}
-
-private:
-
-    Connect4Player(bool human, int id =0, const char* name =0, bool attributes =0)
-      : Player(human, id, name, attributes) {}
-};
-
-
 class Connect4GameState : public GameState
 {
 public:
@@ -42,35 +27,38 @@ public:
     static GameState* creator();
 
     // GameState method overrides
-    void reset();
-    GameMove* get_possible_moves() const;
-    RESULT apply_move(GameMove);
-    void undo_last_move();
-    bool game_over();
-    void display(size_t size, __out_ecount(size) char*) const;
-    void display_score_sheet(bool, size_t size, __out_ecount(size) char*) const;
+    virtual const char* get_player_name(PlayerCode p) const {return p == eBlue ? "Blue" : "Red";}
+    virtual void reset();
+    virtual GameMove* get_possible_moves() const;
+    virtual Result apply_move(GameMove);
+    virtual void undo_last_move();
+    virtual bool game_over();
+    virtual void display(size_t size, __out_ecount(size) char*) const;
+    virtual void display_score_sheet(bool, size_t size, __out_ecount(size) char*) const;
 
     // For use by the GUI frontend only
-    int get_rows() const {return CONNECT4_ROWS;}
-    int get_columns() const {return CONNECT4_COLUMNS;}
-    int get_cell_states_count() const {return 3;}  // Blue, red and empty
-    const char* get_cell_state_image_name(int state) const;
-    int get_cell_state(int row, int column) const {return m_board[column][CONNECT4_ROWS-1-row];}
+    virtual int get_rows() const {return CONNECT4_ROWS;}
+    virtual int get_columns() const {return CONNECT4_COLUMNS;}
+    virtual int get_cell_states_count() const {return 3;}  // Blue, red and empty
+    virtual const char* get_cell_state_image_name(int state) const;
+    virtual int get_cell_state(int row, int column) const {return m_board[column][CONNECT4_ROWS-1-row];}
 
     // Move management
-    GameMove read_move(const char*) const;
-    void write_move(GameMove, int size, __in_ecount(size) char*) const;
-    bool valid_move(GameMove);
+    virtual GameMove read_move(const char*) const;
+    virtual void write_move(GameMove, int size, __in_ecount(size) char*) const;
+    virtual bool valid_move(GameMove);
 
     // Position value management
-    Value position_val() const;
-    const Player* player_ahead() const {return m_winner;}
+    virtual Value position_val() const;
+    virtual PlayerCode player_ahead() const {return m_winner;}
 
 private:
 
-    const Player* m_winner;  // FIXME: Could get rid of this (and then victory_val() and defeat_val()?)
+    PlayerCode m_winner;
     CellState m_board[CONNECT4_COLUMNS][CONNECT4_ROWS];
     Cell m_move_history[CONNECT4_COLUMNS * CONNECT4_ROWS];
 
     Connect4GameState() {reset();}
 };
+
+#endif // GAMES_CONNECT4_H

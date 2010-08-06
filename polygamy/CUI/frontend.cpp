@@ -2,7 +2,6 @@
 
 #include "shared.h"   // Precompiled header; obligatory
 #include "game.h"     // Base class for game definitions and minimax code
-#include "thinker.h"  // Independent thinking thread
 
 // FIXME: the "static int force_initialization" trick isn't working any more,
 // so this hack is necessary to force all the games to be included:
@@ -45,13 +44,8 @@ static void show_state(GameState* pGameState)
 }
 
 
-static void play(GameState* pGameState, int search_depth, int maximum_analysis_time, int value_functions[2])
+static void play(GameState* pGameState, PlayerCode human_player, int search_depth, int maximum_analysis_time, int value_functions[2])
 {
-    // The independent thinking thread
-    // FIXME: to do later
-    //Thinker thinker;
-    //thinker.initialize();  // FIXME maybe: no error checking here, or hardly anywhere else
-
     show_state(pGameState);
 
     int current_move = 0;
@@ -66,17 +60,18 @@ static void play(GameState* pGameState, int search_depth, int maximum_analysis_t
         // 'current_value_function_index' to be toggled extra times.
         pGameState->set_value_function(value_functions[current_value_function_index ^= 1] - 1);
 
-        if (pGameState->player_to_move()->is_human())
+        const char* player_up_name = pGameState->get_player_name(pGameState->player_up());
+
+        if (pGameState->player_up() == human_player)
         {
-            const char* human_player = pGameState->player_to_move()->get_side_name();
-            printf("%s move? ", human_player);
+            printf("%s move? ", player_up_name);
             char input_string[20];
             gets_s(input_string);
             int command = toupper(input_string[0]);
 
             if (command == 'Q')
             {
-                printf("%s quits.\n", human_player);
+                printf("%s quits.\n", player_up_name);
                 break;
             }
             if (command == 'T')
@@ -89,7 +84,7 @@ static void play(GameState* pGameState, int search_depth, int maximum_analysis_t
             }
             if (command == 'S')
             {
-                printf("Getting a computer suggestion for %s...\n", human_player);
+                printf("Getting a computer suggestion for %s...\n", player_up_name);
                 Value value = pGameState->analyze(search_depth, maximum_analysis_time, &move);
                 if (!move)
                 {
@@ -98,7 +93,7 @@ static void play(GameState* pGameState, int search_depth, int maximum_analysis_t
                 }
                 ASSERT(pGameState->valid_move(move));
                 pGameState->write_move(move, sizeof move_string, move_string);
-                printf("%s move: %s (estimated value %d)\n", human_player, move_string, value);
+                printf("%s move: %s (estimated value %d)\n", player_up_name, move_string, value);
                 VERIFY(pGameState->perform_move(move));
                 continue;
             }
@@ -142,11 +137,11 @@ static void play(GameState* pGameState, int search_depth, int maximum_analysis_t
             #if MAXIMIZE_VICTORY
                 if (command == 'W')  // Analyze position looking for the best win
                 {
-                    printf("Searching for the most devastating win possible for %s...\n", human_player);
+                    printf("Searching for the most devastating win possible for %s...\n", player_up_name);
                     Value value = pGameState->maximize_victory(&move);
                     ASSERT(pGameState->valid_move(move));
                     pGameState->write_move(move, sizeof move_string, move_string);
-                    printf("%s move: %s (estimated value %d)\n", human_player, move_string, value);
+                    printf("%s move: %s (estimated value %d)\n", player_up_name, move_string, value);
                     VERIFY(pGameState->perform_move(move));
                     continue;
                 }
@@ -159,7 +154,7 @@ static void play(GameState* pGameState, int search_depth, int maximum_analysis_t
                 printf("Invalid move.\n");
                 continue;
             }
-            if (FAILED(pGameState->perform_move(move)))
+            if (pGameState->perform_move(move).failed())
             {
                 printf("Illegal move.\n");
                 continue;
@@ -180,8 +175,8 @@ static void play(GameState* pGameState, int search_depth, int maximum_analysis_t
             {
                 ASSERT(pGameState->valid_move(move));
                 pGameState->write_move(move, sizeof move_string, move_string);
-                //printf("%s move: %s (strategy %d; estimated value %d)\n", pGameState->player_to_move()->get_side_name(), move_string, value_functions[current_value_function_index], value);  // FIXME: use or remove strategy stuff
-                printf("%s move: %s (estimated value %d)\n", pGameState->player_to_move()->get_side_name(), move_string, value);
+                //printf("%s move: %s (strategy %d; estimated value %d)\n", player_up_name, move_string, value_functions[current_value_function_index], value);  // FIXME: use or remove strategy stuff
+                printf("%s move: %s (estimated value %d)\n", player_up_name, move_string, value);
             }
 
             VERIFY(pGameState->perform_move(move));
@@ -197,7 +192,7 @@ static void play(GameState* pGameState, int search_depth, int maximum_analysis_t
 }
 
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     ComponentTraceBegin();
     TRACE(INFO, "%s launched", *argv);
@@ -217,7 +212,7 @@ void main(int argc, char** argv)
     int chosen_game = (g_num_games == 1) ? 1 : 0;
 
     // Default to letting the human play first
-    int human_player = 1;
+    PlayerCode human_player = 0;
 
     // Position description optionally read from a file
     char* position_file_name = NULL;
@@ -247,11 +242,13 @@ void main(int argc, char** argv)
                     }
                     else
                     {
-                        human_player = atoi(*argv + 1);
-                        if (human_player != 1 && human_player != 2)
+                        if (atoi(*argv + 1) == 1 || atoi(*argv + 1) == 2)
+                        {
+                            human_player = PlayerCode(atoi(*argv + 1) - 1);
+                        }
+                        else
                         {
                             printf("Invalid 'h' option; must specify 1 or 2.\n");
-                            human_player = 1;
                         }
                     }
                     break;
@@ -292,12 +289,12 @@ void main(int argc, char** argv)
                     break;
 
                 case 'C':  // Make computer play itself
-                    human_player = 0;
+                    human_player = -1;
                     break;
 
                 case 'P':  // Profiling mode
                     g_profiling = true;
-                    human_player = 0;
+                    human_player = -1;
                     break;
 
                 case 'F':  // Load initial position from the specified file
@@ -308,7 +305,7 @@ void main(int argc, char** argv)
                     if (error)
                     {
                         printf("Failed to open position file \"%s\"; error %d\n", position_file_name, error);
-                        return;
+                        return Result::Fail;
                     }
                     else
                     {
@@ -321,12 +318,12 @@ void main(int argc, char** argv)
                         if (position_string_size == 0)
                         {
                             printf("Failed to read read data from position file \"%s\"; error %d\n", position_file_name, error);
-                            return;
+                            return Result::Fail;
                         }
                         if (!file_completely_read)
                         {
                             printf("Position file \"%s\" is longer than the maximum size of %d bytes\n", position_file_name, sizeof position_string);
-                            return;
+                            return Result::Fail;
                         }
                     }
                     break;
@@ -343,7 +340,7 @@ void main(int argc, char** argv)
                            "\t-c\tComputer plays itself\n"
                            "\t-p\tRun silently (for performance testing)\n"
                            "\t-fFILE\tLoad initial position from FILE\n");
-                    return;
+                    return Result::Fail;
             }
         }
     }
@@ -373,79 +370,66 @@ void main(int argc, char** argv)
     srand(rng_seed);
 
     const GameDesc* pGame = g_game_list[chosen_game-1];
-    Player* pPlayer0 = pGame->create_player(human_player == 1, 0);
-    Player* pPlayer1 = pGame->create_player(human_player == 2, 1);
 
     GameState* pState = pGame->create_game();
-    pState->set_player(0, pPlayer0);
-    pState->set_player(1, pPlayer1);
 
-    if (FAILED(pState->set_value_function(value_functions[0] - 1)))
+    if (pState->set_value_function(value_functions[0] - 1).failed())
     {
         printf("First player strategy %d is invalid.\n", value_functions[0]);
-        return;
+        return Result::Fail;
     }
-    if (FAILED(pState->set_value_function(value_functions[1] - 1)))
+    if (pState->set_value_function(value_functions[1] - 1).failed())
     {
         printf("Second player strategy %d is invalid.\n", value_functions[1]);
-        return;
+        return Result::Fail;
     }
 
     if (*position_string != 0)
     {
-        if (SUCCEEDED(pState->set_initial_position(position_string_size, position_string)))
+        if (pState->set_initial_position(position_string_size, position_string).ok())
         {
             printf("Loaded initial position from \"%s\".\n", position_file_name);
         }
         else
         {
             printf("Position file \"%s\" is invalid.\n", position_file_name);
-            return;
+            return Result::Fail;
         }
     }
 
     if (g_profiling)
     {
-        // printf("%s: depth %u: max time %d: player 1 strategy %d: player 2 strategy %d: ", pGame->m_name,
-        //        maximum_depth, maximum_analysis_time, value_functions[0], value_functions[1]);
-        // FIXME: use or remove strategy stuff
         printf("%s: depth %u: max time %d: ", pGame->m_name, maximum_depth, maximum_analysis_time);
 
         DELAY_CHECKPOINT();
 
-        play(pState, maximum_depth, maximum_analysis_time, value_functions);
+        play(pState, -1, maximum_depth, maximum_analysis_time, value_functions);
 
         printf("Game took %.6f seconds.\n", DELAY_MEASURED() / 1000);
         char transcript[10000];
-        //pState->display_score_sheet(false, sizeof transcript, transcript);
-        pState->display_score_sheet(true, sizeof transcript, transcript);  // FIXME: temp, or control via cmdline option
+        pState->display_score_sheet(false, sizeof transcript, transcript);
         printf("%s", transcript);
     }
     else
     {
-        // printf("%s: %s vs. %s: depth %d: max time %d: player 1 strategy %d: player 2 strategy %d: seed %d\n",
-        //        pGame->m_name, human_player == 1 ? "human" : "computer", human_player == 2 ? "human" : "computer",
-        //        maximum_depth, maximum_analysis_time, value_functions[0], value_functions[1], rng_seed);
-        // FIXME: use or remove strategy stuff
         printf("%s: %s vs. %s: depth %d: max time %d: seed %d\n", pGame->m_name,
+               human_player == 0 ? "human" : "computer",
                human_player == 1 ? "human" : "computer",
-               human_player == 2 ? "human" : "computer",
                maximum_depth, maximum_analysis_time, rng_seed);
 
-        if (human_player)
+        if (human_player != -1)
         {
             printf("Type 'P' to pass, '-' to take back your last move, 'T' to display game tree, 'X'..., 'M'..., 'Z'..., or 'Q' to quit.\n");
         }
 
-        bool play_again = human_player ? true : false;
+        bool play_again = (human_player != -1);
         do
         {
-            play(pState, maximum_depth, maximum_analysis_time, value_functions);
+            play(pState, human_player, maximum_depth, maximum_analysis_time, value_functions);
 
-            const Player* winner = pState->player_ahead();
-            printf("Game over; %s was victorious.\n", winner ? winner->get_side_name() : "neither player");
+            printf("Game over; %s was victorious.\n", pState->get_player_name(pState->player_ahead()));
 
-            if (human_player) for (;;)
+            if (human_player != -1) for (;;)
             {
                 printf("Type 'P' to play again, 'T' for a transcript of the game, or any other key to quit.\n");
                 char action[20]; gets_s(action); *action = char(toupper(*action));
@@ -465,19 +449,11 @@ void main(int argc, char** argv)
                 }
                 break;
             }
-            else
-            {
-                char transcript[10000];
-                pState->display_score_sheet(true, sizeof transcript, transcript);  // FIXME: temp, or control via cmdline option
-                printf("%s", transcript);
-            }
         }
         while (play_again);
     }
 
     delete pState;
-    delete pPlayer0;
-    delete pPlayer1;
 
     #if USE_GAMENODE_HEAP
         ASSERT(g_allocations == 0);
@@ -486,4 +462,5 @@ void main(int argc, char** argv)
 
     TRACE(INFO, "Polygamy exiting");
     ComponentTraceEnd();
+    return Result::OK;
 }

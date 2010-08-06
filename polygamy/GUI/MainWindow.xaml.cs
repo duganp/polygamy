@@ -107,14 +107,14 @@ namespace PolyGUI
             {
                 m_current_game = game_identifier;
                 m_game_state = m_game_list.CreateGame(m_current_game);
-                m_game_state.ResetGame();  // FIXME: not needed?
+                m_game_state.ResetGame();  // FIXME: needed?
 
                 // Destroy previous cell table, if any
-                if (GameBoardData.Children.Count != 0)  // FIXME: Shouldn't need...
+                if (GameBoardData.Children.Count != 0)  // Shouldn't need these guards, but we do
                     GameBoardData.Children.RemoveRange(0, GameBoardData.Children.Count);
-                if (GameBoardData.RowDefinitions.Count != 0)  // FIXME: Shouldn't need...
+                if (GameBoardData.RowDefinitions.Count != 0)
                     GameBoardData.RowDefinitions.RemoveRange(0, GameBoardData.RowDefinitions.Count);
-                if (GameBoardData.ColumnDefinitions.Count != 0)  // FIXME: Shouldn't need...
+                if (GameBoardData.ColumnDefinitions.Count != 0)
                     GameBoardData.ColumnDefinitions.RemoveRange(0, GameBoardData.ColumnDefinitions.Count);
 
                 // Load new game-specific board cell bitmaps
@@ -144,8 +144,8 @@ namespace PolyGUI
                     {
                         TextBlock label1 = new TextBlock(), label2 = new TextBlock();
                         label1.Text = label2.Text = new String(new char[] {(char)('1' + m_rows - row)});
-                        label1.HorizontalAlignment = label2.HorizontalAlignment = HorizontalAlignment.Center;  // FIXME?
-                        label1.VerticalAlignment = label2.VerticalAlignment = VerticalAlignment.Center;  // FIXME?
+                        label1.HorizontalAlignment = label2.HorizontalAlignment = HorizontalAlignment.Center;
+                        label1.VerticalAlignment = label2.VerticalAlignment = VerticalAlignment.Center;
                         label1.TextAlignment = label2.TextAlignment = TextAlignment.Center;
                         label1.Height = label2.Height = 15;
                         Grid.SetRow(label1, row); Grid.SetRow(label2, row);
@@ -156,8 +156,8 @@ namespace PolyGUI
                     {
                         TextBlock label1 = new TextBlock(), label2 = new TextBlock();
                         label1.Text = label2.Text = new String(new char[] {(char)('A' + col - 1)});
-                        label1.HorizontalAlignment = label2.HorizontalAlignment = HorizontalAlignment.Center;  // FIXME?
-                        label1.VerticalAlignment = label2.VerticalAlignment = VerticalAlignment.Center;  // FIXME?
+                        label1.HorizontalAlignment = label2.HorizontalAlignment = HorizontalAlignment.Center;
+                        label1.VerticalAlignment = label2.VerticalAlignment = VerticalAlignment.Center;
                         label1.TextAlignment = label2.TextAlignment = TextAlignment.Center;
                         label1.Height = label2.Height = 14;
                         Grid.SetRow(label1, 0); Grid.SetRow(label2, m_rows + 1);
@@ -326,7 +326,7 @@ namespace PolyGUI
         {
             m_search_depth = (int)SearchDepth.Value;
 
-            // FIXME: Unfortunately DepthBox may still be null the first time this is called.  Clumsy.
+            // FIXME: DepthBox may still be null the first time this is called.  Clumsy, unsafe.
             if (DepthBox != null)
             {
                 DepthBox.Text = m_search_depth.ToString();
@@ -367,7 +367,6 @@ namespace PolyGUI
             if (m_waiting_for_computer_move)
             {
                 LogString("Computer is still thinking.");
-                // FIXME: Need a way to stop it
             }
             else
             {
@@ -421,7 +420,7 @@ namespace PolyGUI
 
         private void CopyLogWindow(object sender, RoutedEventArgs e)
         {
-            // FIXME: to do
+            // To do
         }
 
         private void ClearLogWindow(object sender, RoutedEventArgs e)

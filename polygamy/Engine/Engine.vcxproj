@@ -114,7 +114,6 @@
     <ClInclude Include="..\Games\tictactoe.h" />
     <ClInclude Include="..\shared.h" />
     <ClInclude Include="game.h" />
-    <ClInclude Include="thinker.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Games\ataxx.cpp" />
@@ -127,7 +126,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="game.cpp" />
-    <ClCompile Include="thinker.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

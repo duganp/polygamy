@@ -7,14 +7,12 @@
 // Game registration stuff
 
 GameState* TicTacToeGameState::creator() {return new TicTacToeGameState;}
-Player* TicTacToePlayer::creator(bool human, int player_num) {return new TicTacToePlayer(human, player_num);}
 
 static int tictactoe_registered =
     register_game
     (
         "Tic-tac-toe",
-        TicTacToeGameState::creator,
-        TicTacToePlayer::creator
+        TicTacToeGameState::creator
     );
 
 
@@ -40,7 +38,7 @@ GameMove* TicTacToeGameState::get_possible_moves() const
         {
             int x = cells_left_to_inspect / TTT_DIMENSION;
             int y = cells_left_to_inspect % TTT_DIMENSION;
-            if (m_cells[m_move_number][x][y] == eEmpty)
+            if (m_cells[move_counter()][x][y] == eEmpty)
             {
                 *current_move++ = Cell(x+1, y+1);
             }
@@ -78,21 +76,21 @@ bool TicTacToeGameState::valid_move(GameMove move)
 
     return x >= 0 && x < TTT_DIMENSION &&
            y >= 0 && y < TTT_DIMENSION &&
-           m_cells[m_move_number][x][y] == eEmpty;
+           m_cells[move_counter()][x][y] == eEmpty;
 }
 
 
-RESULT TicTacToeGameState::apply_move(GameMove move)
+Result TicTacToeGameState::apply_move(GameMove move)
 {
     ASSERT(valid_move(move));
 
     short x = Cell(move).x - 1;
     short y = Cell(move).y - 1;
 
-    ++m_move_number;
-    CellState (&cells)[TTT_DIMENSION][TTT_DIMENSION] = m_cells[m_move_number];
-    memcpy(cells, m_cells[m_move_number-1], sizeof cells);
-    cells[x][y] = m_player_up;
+    advance_move_counter();
+    CellState (&cells)[TTT_DIMENSION][TTT_DIMENSION] = m_cells[move_counter()];
+    memcpy(cells, m_cells[move_counter()-1], sizeof cells);
+    cells[x][y] = player_up();
 
     // Check for victory
     bool row = true, col = true;
@@ -100,8 +98,8 @@ RESULT TicTacToeGameState::apply_move(GameMove move)
 
     for (int i = 1; i < TTT_DIMENSION; ++i)
     {
-        row &= (cells[x][(y+i) % TTT_DIMENSION] == m_player_up);
-        col &= (cells[(x+i) % TTT_DIMENSION][y] == m_player_up);
+        row &= (cells[x][(y+i) % TTT_DIMENSION] == player_up());
+        col &= (cells[(x+i) % TTT_DIMENSION][y] == player_up());
     }
     if (row || col)
     {
@@ -115,7 +113,7 @@ RESULT TicTacToeGameState::apply_move(GameMove move)
             diag1 = true;
             for (int i = 1; i < TTT_DIMENSION; ++i)
             {
-                diag1 &= (cells[(x+i) % TTT_DIMENSION][(y+i) % TTT_DIMENSION] == m_player_up);
+                diag1 &= (cells[(x+i) % TTT_DIMENSION][(y+i) % TTT_DIMENSION] == player_up());
             }
         }
         if (diag1)
@@ -127,7 +125,7 @@ RESULT TicTacToeGameState::apply_move(GameMove move)
             bool diag2 = true;
             for (int i = 1; i < TTT_DIMENSION; ++i)
             {
-                diag2 &= (cells[(x+i) % TTT_DIMENSION][(y+TTT_DIMENSION-i) % TTT_DIMENSION] == m_player_up);
+                diag2 &= (cells[(x+i) % TTT_DIMENSION][(y+TTT_DIMENSION-i) % TTT_DIMENSION] == player_up());
             }
             if (diag2)
             {
@@ -136,19 +134,19 @@ RESULT TicTacToeGameState::apply_move(GameMove move)
         }
     }
 
-    m_value_history[m_move_number] = new_value;
+    m_value_history[move_counter()] = new_value;
 
-    m_player_up = (m_player_up == eCross) ? eNought : eCross;
+    switch_player_up();
 
-    return OK;
+    return Result::OK;
 }
 
 
 void TicTacToeGameState::undo_last_move()
 {
-    ASSERT(m_move_number > 0);
-    --m_move_number;
-    m_player_up = (m_player_up == eCross) ? eNought : eCross;
+    ASSERT(move_counter() > 0);
+    retreat_move_counter();
+    switch_player_up();
 }
 
 
@@ -168,8 +166,8 @@ void TicTacToeGameState::display(size_t output_size, __out_ecount(output_size) c
         {
             StringCchPrintfExA(output, output_size, &output, &output_size, 0,
                                " %c %c", j ? '³' : 'º',
-                               m_cells[m_move_number][i][j] == eCross ? 'X' :
-                               m_cells[m_move_number][i][j] == eNought ? 'O' : ' ');
+                               m_cells[move_counter()][i][j] == eCross ? 'X' :
+                               m_cells[move_counter()][i][j] == eNought ? 'O' : ' ');
         }
         StringCchPrintfExA(output, output_size, &output, &output_size, 0, " º\n");
     }
